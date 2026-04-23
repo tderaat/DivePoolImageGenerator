@@ -45,7 +45,7 @@ header h1 {
 #jumps-input {
   width: 100%;
   font-family: "SF Mono", Menlo, Consolas, monospace;
-  font-size: 14px;
+  font-size: 16px; /* 16px prevents iOS Safari auto-zoom on focus */
   padding: 10px;
   border: 1px solid #c6ccd4;
   border-radius: 6px;
@@ -65,13 +65,11 @@ header h1 {
 }
 
 .color-pickers {
-  margin-top: 14px;
+  margin-left: auto;
   display: flex;
   gap: 14px;
   align-items: center;
   flex-wrap: wrap;
-  padding-top: 12px;
-  border-top: 1px solid #e4e7eb;
 }
 
 .color-pickers label {
@@ -94,7 +92,6 @@ header h1 {
 }
 
 #reset-colors-btn {
-  margin-left: auto;
   padding: 6px 12px;
   font-size: 13px;
   background: #fff;
@@ -144,20 +141,19 @@ button {
 
 .jump-row {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   background: #fff;
   padding: 12px 16px;
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  flex-wrap: wrap;
 }
 
 .jump-code {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 16px;
   font-weight: 600;
-  min-width: 130px;
   color: #2b6cb0;
 }
 
@@ -221,6 +217,57 @@ button {
   color: #7a828a;
   padding: 40px 20px;
   font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: 12px;
+  }
+
+  header h1 {
+    font-size: 18px;
+  }
+
+  .hint {
+    font-size: 13px;
+  }
+
+  .input-panel {
+    padding: 12px;
+  }
+
+  .actions {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .color-pickers {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .color-pickers label {
+    justify-content: space-between;
+  }
+
+  #reset-colors-btn {
+    align-self: flex-start;
+  }
+
+  .formation.random {
+    width: 90px;
+  }
+
+  .formation.block {
+    width: 90px;
+  }
+
+  .jump-code {
+    font-size: 14px;
+  }
 }
 
 @media print {

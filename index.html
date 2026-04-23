@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FS4 Dive Pool Image Generator</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,19 +15,18 @@
   </header>
 
   <section class="input-panel">
-    <textarea id="jumps-input" rows="10" spellcheck="false">21 M F</textarea>
+    <textarea id="jumps-input" rows="5" spellcheck="false">21 M F</textarea>
     <div class="actions">
       <button id="generate-btn" type="button">Generate</button>
       <button id="clear-btn" type="button">Clear</button>
       <button id="print-btn" type="button">PDF</button>
-    </div>
-
-    <div class="color-pickers">
-      <label><span>Point</span><input type="color" id="color-point" value="#d23a28"></label>
-      <label><span>Tail</span><input type="color" id="color-tail" value="#f0cd2a"></label>
-      <label><span>Inside</span><input type="color" id="color-inside" value="#3182ce"></label>
-      <label><span>Outside</span><input type="color" id="color-outside" value="#4aa04a"></label>
-      <button id="reset-colors-btn" type="button">Reset colors</button>
+      <div class="color-pickers">
+        <label><span>Point</span><input type="color" id="color-point" value="#d23a28"></label>
+        <label><span>Tail</span><input type="color" id="color-tail" value="#f0cd2a"></label>
+        <label><span>Inside</span><input type="color" id="color-inside" value="#3182ce"></label>
+        <label><span>Outside</span><input type="color" id="color-outside" value="#4aa04a"></label>
+        <button id="reset-colors-btn" type="button">Reset</button>
+      </div>
     </div>
   </section>
 

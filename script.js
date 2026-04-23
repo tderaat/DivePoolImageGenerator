@@ -231,14 +231,14 @@ function renderBlock(n, container) {
   container.appendChild(img);
 }
 
-function renderJump(parsed, resultsEl) {
+function renderJump(parsed, resultsEl, jumpNumber) {
   if (parsed.errors.length > 0) {
     const row = document.createElement('div');
     row.className = 'error-row';
 
     const label = document.createElement('span');
     label.className = 'error-label';
-    label.textContent = parsed.original;
+    label.textContent = `Jump ${jumpNumber}: ${parsed.original}`;
     row.appendChild(label);
 
     const msg = document.createElement('span');
@@ -254,7 +254,7 @@ function renderJump(parsed, resultsEl) {
 
   const code = document.createElement('div');
   code.className = 'jump-code';
-  code.textContent = `Jump: ${parsed.original}`;
+  code.textContent = `Jump ${jumpNumber}: ${parsed.original}`;
   row.appendChild(code);
 
   const seq = document.createElement('div');
@@ -364,9 +364,7 @@ function generate() {
     return;
   }
 
-  for (const jump of jumps) {
-    renderJump(jump, results);
-  }
+  jumps.forEach((jump, i) => renderJump(jump, results, i + 1));
 }
 
 function clearAll() {
