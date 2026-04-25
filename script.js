@@ -8,6 +8,31 @@
 const RANDOM_IMG = (code) => `images/randoms/${code}.png`;
 const BLOCK_IMG = (n) => `images/blocks/${n}.png`;
 
+const BLOCK_VIDEO = {
+  1:  'https://youtu.be/QiHgkFsiYFo',
+  2:  'https://youtu.be/ezHhMcT9V0Y',
+  3:  'https://youtu.be/1_rkgRdX3rM',
+  4:  'https://youtu.be/c9e0-5waFU4',
+  5:  'https://youtu.be/frOQws-i5HA',
+  6:  'https://youtu.be/lZsF7hS7OiY',
+  7:  'https://youtu.be/zGGqP-I9Jkk',
+  8:  'https://youtu.be/_JBN-IpFdaU',
+  9:  'https://youtu.be/g2wMD6SOxDM',
+  10: 'https://youtu.be/WGaEwIUJbI0',
+  11: 'https://youtu.be/OfM9Dt3G_lc',
+  12: 'https://youtu.be/JEIjH89CJwc',
+  13: 'https://youtu.be/qui7OywzcDI',
+  14: 'https://youtu.be/APV3iwCwdi4',
+  15: 'https://youtu.be/7FOgMqrOw64',
+  16: 'https://youtu.be/AyQUW5vBHj4',
+  17: 'https://youtu.be/s4SqpXP9u7U',
+  18: 'https://youtu.be/l5WgjGbn5V4',
+  19: 'https://youtu.be/jeWvUH_ZBkw',
+  20: 'https://youtu.be/-gFcnOyc7VQ',
+  21: 'https://youtu.be/LZQ9F-81atU',
+  22: 'https://youtu.be/mQPmP2_MFEE',
+};
+
 // 16 randoms — A–H, J–Q (no I).
 const RANDOM_CODES = [
   'A', 'B', 'C', 'D',
@@ -228,7 +253,19 @@ function renderRandom(code, container) {
 function renderBlock(n, container) {
   const img = makeFormationCell(BLOCK_IMG(n), String(n));
   img.classList.add('block');
-  container.appendChild(img);
+  const url = BLOCK_VIDEO[n];
+  if (url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.title = `Block ${n} — watch on YouTube`;
+    a.className = 'block-link';
+    a.appendChild(img);
+    container.appendChild(a);
+  } else {
+    container.appendChild(img);
+  }
 }
 
 function renderJump(parsed, resultsEl, jumpNumber) {

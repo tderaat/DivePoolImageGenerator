@@ -270,6 +270,24 @@ button {
   }
 }
 
+.block-link {
+  display: inline-block;
+  line-height: 0;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.block-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.block-link:focus-visible {
+  outline: 2px solid #2b6cb0;
+  outline-offset: 2px;
+}
+
 @media print {
   body {
     background: #fff;
@@ -291,5 +309,10 @@ button {
     border: 1px solid #ccc;
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .block-link {
+    box-shadow: none;
+    transform: none;
   }
 }
