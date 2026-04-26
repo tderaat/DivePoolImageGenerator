@@ -49,7 +49,10 @@ header h1 {
   padding: 10px;
   border: 1px solid #c6ccd4;
   border-radius: 6px;
-  resize: vertical;
+  /* Auto-grow is handled by JS (autoSizeTextarea); disable manual resize and
+     hide the scrollbar so the element height always matches the content. */
+  resize: none;
+  overflow: hidden;
 }
 
 #jumps-input:focus {

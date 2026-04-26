@@ -141,9 +141,16 @@ function colorsMatchDefaults() {
 async function getSourceImageData(src) {
   if (sourceImageCache.has(src)) return sourceImageCache.get(src);
   const img = new Image();
-  img.crossOrigin = 'anonymous';
+  // Same-origin assets — do NOT set crossOrigin. Setting `anonymous` requires the
+  // server to return CORS headers; without them img.decode() hangs forever, which
+  // breaks every color change. (file:// fallback is still handled by the catch in
+  // applyColorsToImg via the canvas-tainted exception.)
   img.src = src;
-  await img.decode();
+  await new Promise((resolve, reject) => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error('image load failed: ' + src));
+  });
   const canvas = document.createElement('canvas');
   canvas.width = img.naturalWidth;
   canvas.height = img.naturalHeight;
@@ -385,6 +392,15 @@ function readUrl() {
 // Wiring
 // ============================================================
 
+// Auto-grow the jumps textarea so it always fits its content with no scrollbar.
+// Reset to 'auto' first so the element can also shrink when text is removed.
+function autoSizeTextarea() {
+  const ta = document.getElementById('jumps-input');
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
 function generate() {
   const input = document.getElementById('jumps-input').value;
   const results = document.getElementById('results');
@@ -409,10 +425,102 @@ function clearAll() {
   document.getElementById('results').innerHTML = '';
   syncUrl('');
   saveJumpsToStorage('');
+  autoSizeTextarea();
+}
+
+// ============================================================
+// Random jump generator — FAI AAA (Open) 4-Way FS rules
+// ------------------------------------------------------------
+// Each jump targets 5–6 "points" where a block counts as 2 and
+// a random counts as 1 (standard ISC Open-class draw composition).
+// Across the 8 generated jumps:
+//   - every block (1–22) appears at most ONCE
+//   - every random (A–H, J–Q) appears at most TWICE
+// ============================================================
+
+const RANDOM_NUM_JUMPS = 8;
+const RANDOM_POINTS_MIN = 5;
+const RANDOM_POINTS_MAX = 6;
+const RANDOM_MAX_RANDOM_USES = 2;
+const RANDOM_MAX_TOKENS_PER_JUMP = 5;  // a 6-point jump must include at least one block
+
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function pickInt(minInclusive, maxInclusive) {
+  return minInclusive + Math.floor(Math.random() * (maxInclusive - minInclusive + 1));
+}
+
+function generateRandomJumps() {
+  const usedBlocks = new Set();
+  const randomUseCount = new Map(); // letter -> count
+  const lines = [];
+
+  for (let i = 0; i < RANDOM_NUM_JUMPS; i++) {
+    const targetPoints = pickInt(RANDOM_POINTS_MIN, RANDOM_POINTS_MAX);
+
+    // Available blocks (each block can be used at most once total).
+    const availableBlocks = [];
+    for (let b = 1; b <= 22; b++) if (!usedBlocks.has(b)) availableBlocks.push(b);
+    shuffleInPlace(availableBlocks);
+
+    // Pick a block count for this jump: capped at 2 (rule) and bounded by what's left.
+    // Lower bound enforces the 5-token-per-jump cap: each random = 1 token,
+    // each block = 1 token but 2 points, so to hit `targetPoints` in ≤ 5 tokens we need
+    // at least (targetPoints - 5) blocks. (target=5 → ≥0, target=6 → ≥1.)
+    const minBlocksForJump = Math.max(0, targetPoints - RANDOM_MAX_TOKENS_PER_JUMP);
+    const maxBlocksForJump = Math.min(2, Math.floor(targetPoints / 2), availableBlocks.length);
+    const numBlocks = pickInt(minBlocksForJump, maxBlocksForJump);
+    const chosenBlocks = availableBlocks.slice(0, numBlocks);
+    chosenBlocks.forEach(b => usedBlocks.add(b));
+
+    // Fill the rest with randoms (each random ≤ 2 uses across all jumps).
+    let needRandoms = targetPoints - chosenBlocks.length * 2;
+    const availableRandoms = RANDOM_CODES
+      .filter(c => (randomUseCount.get(c) || 0) < RANDOM_MAX_RANDOM_USES);
+    shuffleInPlace(availableRandoms);
+    // Edge case: if random pool is exhausted, take what we can — better short jump
+    // than crashing. In practice 8 jumps × ≤6 pts fits comfortably in 16×2 = 32 slots.
+    needRandoms = Math.min(needRandoms, availableRandoms.length);
+    const chosenRandoms = availableRandoms.slice(0, needRandoms);
+    chosenRandoms.forEach(r => randomUseCount.set(r, (randomUseCount.get(r) || 0) + 1));
+
+    // Interleave block numbers + random letters in random order.
+    const tokens = [
+      ...chosenBlocks.map(b => String(b)),
+      ...chosenRandoms,
+    ];
+    shuffleInPlace(tokens);
+
+    // Guarantee at least one element; if both came back empty (shouldn't happen),
+    // drop in a single random as a safety net.
+    if (tokens.length === 0) {
+      const fallback = RANDOM_CODES[pickInt(0, RANDOM_CODES.length - 1)];
+      tokens.push(fallback);
+    }
+
+    lines.push(tokens.join(' '));
+  }
+
+  return lines.join('\n');
+}
+
+function randomize() {
+  const text = generateRandomJumps();
+  const input = document.getElementById('jumps-input');
+  input.value = text;
+  autoSizeTextarea();
+  generate(); // re-renders, syncs URL, saves to localStorage
 }
 
 document.getElementById('generate-btn').addEventListener('click', generate);
 document.getElementById('clear-btn').addEventListener('click', clearAll);
+document.getElementById('random-btn').addEventListener('click', randomize);
 document.getElementById('print-btn').addEventListener('click', () => window.print());
 
 // --- Color picker wiring ---
@@ -424,17 +532,17 @@ const COLOR_PICKER_IDS = {
   outside: 'color-outside',
 };
 
-let recolorScheduled = false;
+// Re-render every formation image with the current color palette.
+// Called synchronously on every color change; safe to fire rapidly
+// because each in-flight applyColorsToImg captures `recolorGeneration`
+// and bails when a newer change supersedes it. No rAF gating: the prior
+// flag-based batching could get stuck if a frame was missed, leaving
+// recolor disabled until reload.
 function scheduleRecolorAll() {
-  if (recolorScheduled) return;
-  recolorScheduled = true;
-  requestAnimationFrame(() => {
-    recolorScheduled = false;
-    recolorGeneration++;
-    for (const img of document.querySelectorAll('.formation[data-src]')) {
-      applyColorsToImg(img, img.dataset.src);
-    }
-  });
+  recolorGeneration++;
+  for (const img of document.querySelectorAll('.formation[data-src]')) {
+    applyColorsToImg(img, img.dataset.src);
+  }
 }
 
 function onColorChange() {
@@ -470,8 +578,11 @@ document.getElementById('jumps-input').addEventListener('keydown', (e) => {
 
 // Auto-generate after a paste — wait a tick so the pasted text is in the value.
 document.getElementById('jumps-input').addEventListener('paste', () => {
-  setTimeout(generate, 0);
+  setTimeout(() => { autoSizeTextarea(); generate(); }, 0);
 });
+
+// Grow / shrink the textarea as the user types or programmatic input fires.
+document.getElementById('jumps-input').addEventListener('input', autoSizeTextarea);
 
 // On load: restore colors + jumps. Priority: URL > localStorage > defaults.
 (function init() {
@@ -496,5 +607,6 @@ document.getElementById('jumps-input').addEventListener('paste', () => {
       document.getElementById('jumps-input').value = fromStorage;
     }
   }
+  autoSizeTextarea();
   generate();
 })();
