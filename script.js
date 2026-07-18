@@ -324,12 +324,20 @@ function renderJump(parsed, resultsEl, jumpNumber) {
 
 const STORAGE_KEY_JUMPS = 'divepool.jumps';
 const STORAGE_KEY_COLORS = 'divepool.colors';
+const STORAGE_KEY_THEME = 'divepool.theme';
+const STORAGE_KEY_IGNORE = 'divepool.ignore';
 
 function saveJumpsToStorage(text) {
   try { localStorage.setItem(STORAGE_KEY_JUMPS, text); } catch (_) {}
 }
 function readJumpsFromStorage() {
   try { return localStorage.getItem(STORAGE_KEY_JUMPS); } catch (_) { return null; }
+}
+function saveIgnoreToStorage(text) {
+  try { localStorage.setItem(STORAGE_KEY_IGNORE, text); } catch (_) {}
+}
+function readIgnoreFromStorage() {
+  try { return localStorage.getItem(STORAGE_KEY_IGNORE); } catch (_) { return null; }
 }
 function saveColorsToStorage(colors) {
   try { localStorage.setItem(STORAGE_KEY_COLORS, JSON.stringify(colors)); } catch (_) {}
@@ -389,16 +397,82 @@ function readUrl() {
 }
 
 // ============================================================
+// Theme (light / dark) — persisted, defaults to OS preference.
+// ============================================================
+
+// Theme is stored in a cookie (1 year) so it survives across sessions.
+// SameSite=Lax keeps it same-site only; no sensitive data here.
+function writeThemeCookie(theme) {
+  const oneYear = 60 * 60 * 24 * 365;
+  document.cookie =
+    `${STORAGE_KEY_THEME}=${theme}; path=/; max-age=${oneYear}; SameSite=Lax`;
+}
+
+function readThemeCookie() {
+  const match = document.cookie.match(
+    new RegExp('(?:^|; )' + STORAGE_KEY_THEME + '=([^;]*)')
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark'
+    ? 'dark'
+    : 'light';
+}
+
+function systemPrefersDark() {
+  return window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function initTheme() {
+  const cookie = readThemeCookie();
+  const theme = (cookie === 'dark' || cookie === 'light')
+    ? cookie
+    : (systemPrefersDark() ? 'dark' : 'light');
+  applyTheme(theme);
+
+  // With no saved preference, keep following the OS live. Once the user
+  // toggles (which writes a cookie), this listener stops overriding them.
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (readThemeCookie() === null) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    });
+  }
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  writeThemeCookie(next);
+}
+
+// ============================================================
 // Wiring
 // ============================================================
 
 // Auto-grow the jumps textarea so it always fits its content with no scrollbar.
 // Reset to 'auto' first so the element can also shrink when text is removed.
-function autoSizeTextarea() {
-  const ta = document.getElementById('jumps-input');
+function autoSizeOne(ta) {
   if (!ta) return;
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
+}
+
+function autoSizeTextarea() {
+  autoSizeOne(document.getElementById('jumps-input'));
+  autoSizeOne(document.getElementById('ignore-input'));
 }
 
 function generate() {
@@ -456,7 +530,29 @@ function pickInt(minInclusive, maxInclusive) {
   return minInclusive + Math.floor(Math.random() * (maxInclusive - minInclusive + 1));
 }
 
+// Parse the "ignore" textarea into the set of blocks / randoms to exclude
+// from generated jumps. Same token grammar as the main parser; unrecognized
+// tokens are silently skipped so a stray character never breaks generation.
+function readIgnoreSet() {
+  const el = document.getElementById('ignore-input');
+  const text = el ? el.value : '';
+  const blocks = new Set();
+  const randoms = new Set();
+  const tokens = text.split(/[-\s]+/).map(t => t.trim()).filter(t => t.length > 0);
+  for (const token of tokens) {
+    if (/^\d+$/.test(token)) {
+      const n = parseInt(token, 10);
+      if (n >= 1 && n <= 22) blocks.add(n);
+    } else if (/^[A-Za-z]$/.test(token)) {
+      const letter = token.toUpperCase();
+      if (VALID_RANDOM.has(letter)) randoms.add(letter);
+    }
+  }
+  return { blocks, randoms };
+}
+
 function generateRandomJumps() {
+  const ignore = readIgnoreSet();
   const usedBlocks = new Set();
   const randomUseCount = new Map(); // letter -> count
   const lines = [];
@@ -464,25 +560,32 @@ function generateRandomJumps() {
   for (let i = 0; i < RANDOM_NUM_JUMPS; i++) {
     const targetPoints = pickInt(RANDOM_POINTS_MIN, RANDOM_POINTS_MAX);
 
-    // Available blocks (each block can be used at most once total).
+    // Available blocks (each block can be used at most once total, and never
+    // if the user listed it in the ignore area).
     const availableBlocks = [];
-    for (let b = 1; b <= 22; b++) if (!usedBlocks.has(b)) availableBlocks.push(b);
+    for (let b = 1; b <= 22; b++) {
+      if (!usedBlocks.has(b) && !ignore.blocks.has(b)) availableBlocks.push(b);
+    }
     shuffleInPlace(availableBlocks);
 
     // Pick a block count for this jump: capped at 2 (rule) and bounded by what's left.
     // Lower bound enforces the 5-token-per-jump cap: each random = 1 token,
     // each block = 1 token but 2 points, so to hit `targetPoints` in ≤ 5 tokens we need
     // at least (targetPoints - 5) blocks. (target=5 → ≥0, target=6 → ≥1.)
+    // When exclusions leave too few blocks, clamp the lower bound to what's
+    // available so pickInt never gets an inverted range.
     const minBlocksForJump = Math.max(0, targetPoints - RANDOM_MAX_TOKENS_PER_JUMP);
     const maxBlocksForJump = Math.min(2, Math.floor(targetPoints / 2), availableBlocks.length);
-    const numBlocks = pickInt(minBlocksForJump, maxBlocksForJump);
+    const loBlocks = Math.min(minBlocksForJump, maxBlocksForJump);
+    const numBlocks = pickInt(loBlocks, maxBlocksForJump);
     const chosenBlocks = availableBlocks.slice(0, numBlocks);
     chosenBlocks.forEach(b => usedBlocks.add(b));
 
-    // Fill the rest with randoms (each random ≤ 2 uses across all jumps).
+    // Fill the rest with randoms (each random ≤ 2 uses across all jumps, and
+    // never if the user listed it in the ignore area).
     let needRandoms = targetPoints - chosenBlocks.length * 2;
     const availableRandoms = RANDOM_CODES
-      .filter(c => (randomUseCount.get(c) || 0) < RANDOM_MAX_RANDOM_USES);
+      .filter(c => !ignore.randoms.has(c) && (randomUseCount.get(c) || 0) < RANDOM_MAX_RANDOM_USES);
     shuffleInPlace(availableRandoms);
     // Edge case: if random pool is exhausted, take what we can — better short jump
     // than crashing. In practice 8 jumps × ≤6 pts fits comfortably in 16×2 = 32 slots.
@@ -518,10 +621,10 @@ function randomize() {
   generate(); // re-renders, syncs URL, saves to localStorage
 }
 
-document.getElementById('generate-btn').addEventListener('click', generate);
 document.getElementById('clear-btn').addEventListener('click', clearAll);
 document.getElementById('random-btn').addEventListener('click', randomize);
 document.getElementById('print-btn').addEventListener('click', () => window.print());
+document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
 // --- Color picker wiring ---
 
@@ -568,24 +671,31 @@ document.getElementById('reset-colors-btn').addEventListener('click', () => {
   scheduleRecolorAll();
 });
 
-// Ctrl/Cmd+Enter inside the textarea also generates.
-document.getElementById('jumps-input').addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    e.preventDefault();
-    generate();
-  }
+// Live rendering: re-render as the user types. Debounced so a burst of
+// keystrokes only triggers one render (and one URL/localStorage write).
+// The 'input' event covers typing, pasting, cut, and programmatic input.
+let generateTimer = null;
+function scheduleGenerate() {
+  if (generateTimer) clearTimeout(generateTimer);
+  generateTimer = setTimeout(generate, 150);
+}
+
+document.getElementById('jumps-input').addEventListener('input', () => {
+  autoSizeTextarea();
+  scheduleGenerate();
 });
 
-// Auto-generate after a paste — wait a tick so the pasted text is in the value.
-document.getElementById('jumps-input').addEventListener('paste', () => {
-  setTimeout(() => { autoSizeTextarea(); generate(); }, 0);
+// Ignore area: persist and resize on edit. It only affects the Random
+// generator, so there's no need to re-render existing results here.
+document.getElementById('ignore-input').addEventListener('input', () => {
+  autoSizeOne(document.getElementById('ignore-input'));
+  saveIgnoreToStorage(document.getElementById('ignore-input').value);
 });
-
-// Grow / shrink the textarea as the user types or programmatic input fires.
-document.getElementById('jumps-input').addEventListener('input', autoSizeTextarea);
 
 // On load: restore colors + jumps. Priority: URL > localStorage > defaults.
 (function init() {
+  initTheme();
+
   const { jumps: urlJumps, colors: urlColors } = readUrl();
 
   const effectiveColors = urlColors || readColorsFromStorage();
@@ -607,6 +717,12 @@ document.getElementById('jumps-input').addEventListener('input', autoSizeTextare
       document.getElementById('jumps-input').value = fromStorage;
     }
   }
+
+  const ignoreStored = readIgnoreFromStorage();
+  if (ignoreStored !== null) {
+    document.getElementById('ignore-input').value = ignoreStored;
+  }
+
   autoSizeTextarea();
   generate();
 })();

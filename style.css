@@ -1,3 +1,35 @@
+:root {
+  --bg: #f4f5f7;
+  --text: #1e2329;
+  --hint: #556;
+  --panel-bg: #fff;
+  --panel-shadow: rgba(0, 0, 0, 0.06);
+  --code-bg: #e4e7eb;
+  --input-bg: #fff;
+  --input-border: #c6ccd4;
+  --btn-bg: #fff;
+  --btn-hover: #f0f2f5;
+  --label-text: #334;
+  --formation-bg: #fafbfc;
+  --accent: #2b6cb0;
+}
+
+[data-theme="dark"] {
+  --bg: #16191d;
+  --text: #e4e7eb;
+  --hint: #98a2b0;
+  --panel-bg: #24282e;
+  --panel-shadow: rgba(0, 0, 0, 0.4);
+  --code-bg: #333a43;
+  --input-bg: #1c2025;
+  --input-border: #3a424c;
+  --btn-bg: #2d323a;
+  --btn-hover: #383f48;
+  --label-text: #c0c7d0;
+  --formation-bg: #f0f2f5;
+  --accent: #5b9bd5;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6,8 +38,32 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   padding: 24px;
-  background: #f4f5f7;
-  color: #1e2329;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#theme-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--btn-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+}
+
+#theme-toggle:hover {
+  background: var(--btn-hover);
 }
 
 header {
@@ -22,12 +78,12 @@ header h1 {
 
 .hint {
   margin: 0;
-  color: #556;
+  color: var(--hint);
   font-size: 14px;
 }
 
 .hint code {
-  background: #e4e7eb;
+  background: var(--code-bg);
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 13px;
@@ -36,18 +92,55 @@ header h1 {
 .input-panel {
   max-width: 1200px;
   margin: 0 auto 24px;
-  background: #fff;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px var(--panel-shadow);
 }
 
-#jumps-input {
+.textareas {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.textarea-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.textareas > .textarea-col:first-child {
+  flex: 4;
+}
+
+.textareas > .textarea-col:last-child {
+  flex: 1;
+}
+
+.textarea-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-text);
+}
+
+.textarea-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--input-border);
+}
+
+#jumps-input,
+#ignore-input {
   width: 100%;
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 16px; /* 16px prevents iOS Safari auto-zoom on focus */
   padding: 10px;
-  border: 1px solid #c6ccd4;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   /* Auto-grow is handled by JS (autoSizeTextarea); disable manual resize and
      hide the scrollbar so the element height always matches the content. */
@@ -55,7 +148,8 @@ header h1 {
   overflow: hidden;
 }
 
-#jumps-input:focus {
+#jumps-input:focus,
+#ignore-input:focus {
   outline: none;
   border-color: #4c8bf5;
   box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.2);
@@ -80,7 +174,7 @@ header h1 {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #334;
+  color: var(--label-text);
   cursor: pointer;
 }
 
@@ -88,7 +182,7 @@ header h1 {
   width: 32px;
   height: 28px;
   padding: 0;
-  border: 1px solid #c6ccd4;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   background: none;
   cursor: pointer;
@@ -97,41 +191,37 @@ header h1 {
 #reset-colors-btn {
   padding: 6px 12px;
   font-size: 13px;
-  background: #fff;
-  border: 1px solid #c6ccd4;
-  color: #333;
+  background: var(--btn-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
 }
 
 #reset-colors-btn:hover {
-  background: #f0f2f5;
+  background: var(--btn-hover);
 }
 
 button {
   font-size: 14px;
   padding: 8px 18px;
   border-radius: 6px;
-  border: 1px solid transparent;
+  border: 1px solid var(--input-border);
+  background: var(--btn-bg);
+  color: var(--text);
   cursor: pointer;
 }
 
-#generate-btn {
-  background: #2b6cb0;
-  color: white;
-  font-weight: 600;
-}
-
-#generate-btn:hover {
-  background: #2557a0;
+button:hover {
+  background: var(--btn-hover);
 }
 
 #clear-btn {
-  background: #fff;
-  border-color: #c6ccd4;
-  color: #333;
+  background: var(--btn-bg);
+  border-color: var(--input-border);
+  color: var(--text);
 }
 
 #clear-btn:hover {
-  background: #f0f2f5;
+  background: var(--btn-hover);
 }
 
 #results {
@@ -147,17 +237,17 @@ button {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  background: #fff;
+  background: var(--panel-bg);
   padding: 12px 16px;
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px var(--panel-shadow);
 }
 
 .jump-code {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 16px;
   font-weight: 600;
-  color: #2b6cb0;
+  color: var(--accent);
 }
 
 .jump-sequence {
@@ -170,7 +260,7 @@ button {
 .formation {
   display: block;
   object-fit: contain;
-  background-color: #fafbfc;
+  background-color: var(--formation-bg);
   border-radius: 4px;
 }
 
@@ -239,6 +329,16 @@ button {
     padding: 12px;
   }
 
+  .textareas {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .textarea-divider {
+    width: auto;
+    height: 1px;
+  }
+
   .actions {
     gap: 6px;
     flex-wrap: wrap;
@@ -292,14 +392,21 @@ button {
 }
 
 @media print {
+  /* Always print on white with dark text, even in dark theme. */
   body {
     background: #fff;
+    color: #1e2329;
     padding: 0;
+  }
+
+  .jump-code {
+    color: #2b6cb0;
   }
 
   header,
   .input-panel,
-  .color-pickers {
+  .color-pickers,
+  #theme-toggle {
     display: none;
   }
 

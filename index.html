@@ -8,16 +8,35 @@
 </head>
 <body>
   <header>
-    <h1>FS4 Dive Pool Image Generator</h1>
+    <div class="header-top">
+      <h1>FS4 Dive Pool Image Generator</h1>
+      <button id="theme-toggle" type="button" aria-label="Toggle dark theme" title="Toggle dark theme">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3 a9 9 0 0 1 0 18 z" fill="currentColor" stroke="none"></path>
+        </svg>
+      </button>
+    </div>
     <p class="hint">
       Paste jumps, one per line. Separate elements with spaces or dashes.
     </p>
   </header>
 
   <section class="input-panel">
-    <textarea id="jumps-input" rows="5" spellcheck="false">21 M F</textarea>
+    <div class="textareas">
+      <div class="textarea-col">
+        <label class="textarea-label" for="jumps-input">Jumps</label>
+        <textarea id="jumps-input" rows="5" spellcheck="false">21 M F</textarea>
+      </div>
+      <div class="textarea-divider"></div>
+      <div class="textarea-col">
+        <label class="textarea-label" for="ignore-input">Ignore</label>
+        <textarea id="ignore-input" rows="5" spellcheck="false" placeholder="e.g. 6 A 12"></textarea>
+      </div>
+    </div>
     <div class="actions">
-      <button id="generate-btn" type="button">Generate</button>
       <button id="clear-btn" type="button">Clear</button>
       <button id="random-btn" type="button" title="Generate 8 random jumps using FAI AAA dive pool rules">Random</button>
       <button id="print-btn" type="button">PDF</button>
