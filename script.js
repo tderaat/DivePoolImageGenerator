@@ -507,12 +507,12 @@ function clearAll() {
 // ------------------------------------------------------------
 // Each jump targets 5–6 "points" where a block counts as 2 and
 // a random counts as 1 (standard ISC Open-class draw composition).
-// Across the 8 generated jumps:
+// Across the 10 generated jumps:
 //   - every block (1–22) appears at most ONCE
 //   - every random (A–H, J–Q) appears at most TWICE
 // ============================================================
 
-const RANDOM_NUM_JUMPS = 8;
+const RANDOM_NUM_JUMPS = 10;
 const RANDOM_POINTS_MIN = 5;
 const RANDOM_POINTS_MAX = 6;
 const RANDOM_MAX_RANDOM_USES = 2;
