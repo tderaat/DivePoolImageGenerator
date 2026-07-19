@@ -462,6 +462,43 @@ function toggleTheme() {
 // Wiring
 // ============================================================
 
+// Letters that can never form a valid token (I, plus R–Z) are stripped from the
+// inputs as they're typed, so no invalid random can be entered in the first place.
+const BLOCKED_LETTERS = /[irstuvwxyz]/gi;
+const MAX_BLOCK = 22;
+
+// Sanitize input as it's typed: drop blocked letters, and cap any number token
+// at the highest valid block (22) by dropping digits that would push it out of
+// range (e.g. "23" -> "2", "220" -> "22").
+function sanitizeInput(text) {
+  let out = '';
+  let digits = '';
+  for (const ch of text.replace(BLOCKED_LETTERS, '')) {
+    if (ch >= '0' && ch <= '9') {
+      const next = digits + ch;
+      if (parseInt(next, 10) <= MAX_BLOCK) {
+        digits = next;
+        out += ch;
+      }
+      // else: digit would exceed the max block — drop it
+    } else {
+      digits = '';
+      out += ch;
+    }
+  }
+  return out;
+}
+
+// Apply the sanitizer to a textarea's value, keeping the caret in place.
+function filterBlockedInput(ta) {
+  const original = ta.value;
+  const filtered = sanitizeInput(original);
+  if (filtered === original) return;
+  const caret = sanitizeInput(original.slice(0, ta.selectionStart)).length;
+  ta.value = filtered;
+  ta.setSelectionRange(caret, caret);
+}
+
 // Auto-grow the jumps textarea so it always fits its content with no scrollbar.
 // Reset to 'auto' first so the element can also shrink when text is removed.
 function autoSizeOne(ta) {
@@ -680,16 +717,18 @@ function scheduleGenerate() {
   generateTimer = setTimeout(generate, 150);
 }
 
-document.getElementById('jumps-input').addEventListener('input', () => {
+document.getElementById('jumps-input').addEventListener('input', (e) => {
+  filterBlockedInput(e.target);
   autoSizeTextarea();
   scheduleGenerate();
 });
 
 // Ignore area: persist and resize on edit. It only affects the Random
 // generator, so there's no need to re-render existing results here.
-document.getElementById('ignore-input').addEventListener('input', () => {
-  autoSizeOne(document.getElementById('ignore-input'));
-  saveIgnoreToStorage(document.getElementById('ignore-input').value);
+document.getElementById('ignore-input').addEventListener('input', (e) => {
+  filterBlockedInput(e.target);
+  autoSizeOne(e.target);
+  saveIgnoreToStorage(e.target.value);
 });
 
 // On load: restore colors + jumps. Priority: URL > localStorage > defaults.
